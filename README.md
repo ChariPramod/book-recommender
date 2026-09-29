@@ -7,25 +7,25 @@ a 12k-book dataset, reranked and summarized from the books' own stored summaries
 
 ## Query flow
 
-Solid nodes are built. Dashed nodes are planned (Phase 2).
+Solid nodes are built. Dashed nodes would mark planned parts (none right now).
 
 ```mermaid
 flowchart TD
-    subgraph APP["app.py : Streamlit UI"]
+    subgraph APP["app.py : Streamlit chat UI"]
         U(["User message"])
-        OUT["Show reply + book cards<br/>rank, match score, LLM fit,<br/>title, author, genres, brief summary"]
+        OUT["Show reply + book cards<br/>rank, match score, title, author,<br/>genres, brief summary"]
     end
 
-    subgraph CHAT["chat.py : conversation manager (Phase 2)"]
+    subgraph CHAT["chat.py : conversation manager"]
         GATE{"Safety gate<br/>max 500 chars, 30 messages"}
         LIM["Limit message"]
         TALK["LLM reply: small talk,<br/>one clarifying question, or polite redirect"]
         ABOUT["Answer about a shown book<br/>from its stored summary only"]
         NOM["No strong matches:<br/>suggest how to rephrase"]
-        MEM[("Session memory<br/>last 10 turns + books shown")]
+        MEM[("Session memory in st.session_state<br/>last 10 turns + books shown")]
     end
 
-    subgraph ROUTER["router.py : intent + query rewrite (Phase 2)"]
+    subgraph ROUTER["router.py : intent + query rewrite"]
         R["LLM returns intent,<br/>standalone search query, book_ref"]
     end
 
@@ -46,7 +46,7 @@ flowchart TD
     GATE -- ok --> R
     R -- "small_talk / unclear / off_topic" --> TALK
     R -- about_shown_book --> ABOUT
-    R -- "recommend / refine" --> E
+    R -- "recommend / refine<br/>(refine skips books already shown)" --> E
     Q --> C
     Q -. "Cohere fails: similarity order" .-> G
     T -- yes --> G
@@ -60,22 +60,16 @@ flowchart TD
     MEM -. "history" .-> R
 
     classDef planned stroke-dasharray: 5 5
-    class GATE,LIM,TALK,ABOUT,NOM,MEM,R planned
-    style CHAT stroke-dasharray: 5 5
-    style ROUTER stroke-dasharray: 5 5
 ```
-
-Until Phase 2 lands, `app.py` is a single search box that calls `recommend()` directly and shows
-"No good matches found." when nothing clears the threshold.
 
 ## Files in the query flow
 
 | File | What it does in the query flow | Status |
 |---|---|---|
-| `app.py` | Streamlit UI: takes the user's text, shows book cards | Built (search box); chat UI planned (Phase 2) |
-| `src/chat.py` | Safety gate, session memory, dispatches each intent to a reply | Planned (Phase 2) |
-| `src/router.py` | One LLM call: intent, standalone search query, book_ref | Planned (Phase 2) |
-| `src/recommend.py` | Runs retrieve → rerank → threshold → generate | Built |
+| `app.py` | Streamlit chat UI: keeps the session in `st.session_state`, shows replies and book cards | Built |
+| `src/chat.py` | Safety gate, session memory (last 10 turns), one handler per intent | Built (end-to-end run pending the smoke test) |
+| `src/router.py` | One strict-JSON LLM call: intent, standalone search query, book_ref | Built (end-to-end run pending the smoke test) |
+| `src/recommend.py` | Runs retrieve → rerank → threshold → generate; can exclude books already shown | Built |
 | `src/retrieve.py` | Embeds the query; Qdrant top 30 books by best chunk, max 2 per author | Built |
 | `src/embed.py` | `embed_texts()`, used here to embed the query | Built |
 | `src/rerank.py` | Cohere rerank to a 0 to 1 match score; falls back to similarity order on failure | Built |

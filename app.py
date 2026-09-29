@@ -1,56 +1,54 @@
-"""Streamlit UI for the book recommender. Run with: streamlit run app.py"""
+"""Streamlit chat UI for the book recommender. Run with: streamlit run app.py"""
 
-import pandas as pd
 import streamlit as st
-from openai import OpenAI
 
-from src.config import BOOKS_PATH
-from src.recommend import recommend
-from src.store import get_client
+from src.chat import handle_message, load_resources, new_session
+from src.config import MAX_MESSAGE_CHARS
 
-
-@st.cache_resource
-def get_qdrant_client():
-    return get_client()
+GREETING = "Hi! Tell me what you're in the mood to read: a genre, a mood, a theme, or a book you loved."
 
 
 @st.cache_resource
-def get_openai_client():
-    return OpenAI()
+def get_resources() -> dict:
+    # Qdrant client, OpenAI client, Cohere client and books.jsonl, built once per server process
+    return load_resources()
 
 
-@st.cache_resource
-def get_books() -> pd.DataFrame:
-    return pd.read_json(BOOKS_PATH, lines=True).set_index("book_id")
+def render_books(books: list[dict]) -> None:
+    for book in books:
+        with st.container(border=True):
+            st.markdown(f"**{book['rank']}. {book['title']}**")
+            st.caption(f"by {book['author']} · {', '.join(book['genres'])}")
+            if book["match_score"] is not None:
+                st.write(f"match score: {book['match_score']:.2f}")
+            else:
+                st.write("match score: unavailable (reranker offline)")
+            st.write(book["brief_summary"])
+            with st.expander("Why this book"):
+                st.write(book["matched_chunk"])
+                st.caption(f"LLM fit: {book['fit']}/10 · debug similarity: {book['similarity']:.3f}")
 
 
 st.title("Book Recommender")
 
-query = st.text_input("What are you in the mood to read?")
-searched = st.button("Search")
+if "chat" not in st.session_state:
+    st.session_state.chat = new_session()  # memory: last 10 turns + books shown
+    st.session_state.messages = [{"role": "assistant", "text": GREETING, "books": []}]  # full display log
 
-if searched and query.strip():
-    with st.spinner("Searching..."):
-        results = recommend(
-            query,
-            qdrant_client=get_qdrant_client(),
-            openai_client=get_openai_client(),
-            books=get_books(),
-        )
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["text"])
+        render_books(message["books"])
 
-    if not results:
-        st.write("No good matches found.")
-    else:
-        for result in results:
-            with st.container(border=True):
-                st.subheader(f"{result['rank']}. {result['title']}")
-                st.caption(f"by {result['author']} — {', '.join(result['genres'])}")
-                if result["match_score"] is not None:
-                    st.write(f"match score: {result['match_score']:.2f}")
-                else:
-                    st.write("match score: unavailable (reranker offline)")
-                st.write(f"LLM fit: {result['fit']}/10")
-                st.write(result["brief_summary"])
-                with st.expander("Matched passage"):
-                    st.write(result["matched_chunk"])
-                    st.caption(f"debug — embedding similarity: {result['similarity']:.3f}")
+if text := st.chat_input("Ask for a book recommendation", max_chars=MAX_MESSAGE_CHARS):
+    st.session_state.messages.append({"role": "user", "text": text, "books": []})
+    with st.chat_message("user"):
+        st.write(text)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            reply = handle_message(st.session_state.chat, text, resources=get_resources())
+        st.write(reply["text"])
+        render_books(reply["books"])
+
+    st.session_state.messages.append({"role": "assistant", "text": reply["text"], "books": reply["books"]})

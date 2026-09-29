@@ -39,6 +39,12 @@ RERANK_SUMMARY_CHARS = 2000  # summary trimmed to this before being sent to the 
 MATCH_THRESHOLD = 0.3  # minimum rerank score to show a book — NOT YET TUNED
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
+# chat
+MAX_MESSAGE_CHARS = 500  # safety gate: longest message accepted, checked before any LLM call
+MAX_SESSION_MESSAGES = 30  # safety gate: user messages per session, caps cost per visitor
+MEMORY_TURNS = 10  # user + assistant turns kept and sent to the router as history
+ABOUT_BOOK_SUMMARY_CHARS = 6000  # summary trimmed to this when answering about one book
+
 
 def require_qdrant_credentials() -> None:
     # a clear failure at the point Qdrant is actually needed, not at import

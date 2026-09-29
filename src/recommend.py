@@ -21,6 +21,7 @@ def recommend(
     rerank_client: cohere.ClientV2 | None = None,
     books: pd.DataFrame | None = None,
     collection: str = COLLECTION,
+    exclude_book_ids: set[str] | None = None,
 ) -> list[dict]:
     """Retrieve RETRIEVE_LIMIT books → rerank → keep the top RERANK_TOP_N → drop any
     below MATCH_THRESHOLD → let the LLM pick 3 to 5 and summarize them.
@@ -40,8 +41,13 @@ def recommend(
     if books is None:
         books = pd.read_json(BOOKS_PATH, lines=True).set_index("book_id")
 
-    retrieved = search(qdrant_client, openai_client, collection, query, limit=RETRIEVE_LIMIT)
-    candidates = [{**r, "summary": books.loc[r["book_id"], "summary"]} for r in retrieved]
+    # a refine request must not show the same books again; over-fetch by the number
+    # excluded so the reranker still sees about RETRIEVE_LIMIT fresh candidates
+    exclude = exclude_book_ids or set()
+    retrieved = search(qdrant_client, openai_client, collection, query, limit=RETRIEVE_LIMIT + len(exclude))
+    candidates = [
+        {**r, "summary": books.loc[r["book_id"], "summary"]} for r in retrieved if r["book_id"] not in exclude
+    ]
 
     reranked, ok = rerank(rerank_client, query, candidates, top_n=RERANK_TOP_N)
     if ok:
