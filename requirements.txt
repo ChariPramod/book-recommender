@@ -1,0 +1,12 @@
+pandas==3.0.6
+numpy==2.5.3
+tiktoken==0.14.0
+matplotlib==3.11.2
+jupyter==1.1.1
+notebook==7.6.3
+openai==3.20.0
+python-dotenv==1.0.1
+pytest==8.3.3
+qdrant-client==1.19.1
+streamlit==1.64.0
+cohere==7.2.0
