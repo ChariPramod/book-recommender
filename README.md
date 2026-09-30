@@ -34,10 +34,10 @@ flowchart TD
             E["Embed query<br/>text-embedding-3-small"] --> Q["Qdrant: top 30 books<br/>best chunk per book<br/>max 2 per author"]
         end
         subgraph RR["rerank.py"]
-            C["Cohere rerank-v4.0-fast<br/>title + genres + summary<br/>top 10 with match score"] --> T{"Any book with match score<br/>at or above MATCH_THRESHOLD?"}
+            C["Cohere rerank-v4.0-fast<br/>title + genres + summary<br/>top 10 with match score"] --> T{"Any book with match score<br/>at or above MATCH_THRESHOLD (0.45)?"}
         end
         subgraph GEN["generate.py"]
-            G["LLM_MODEL picks 3 to 5<br/>grounded brief summaries + fit 1-10<br/>code validates every book_id"]
+            G["LLM_MODEL picks 3 to 5<br/>grounded brief summaries + fit 1-10<br/>code validates every book_id<br/>cards sorted by match score"]
         end
     end
 
@@ -69,7 +69,7 @@ flowchart TD
 | `app.py` | Streamlit chat UI: keeps the session in `st.session_state`, shows replies and book cards | Built |
 | `src/chat.py` | Safety gate, session memory (last 10 turns), one handler per intent | Built (end-to-end run pending the smoke test) |
 | `src/router.py` | One strict-JSON LLM call: intent, standalone search query, book_ref | Built (end-to-end run pending the smoke test) |
-| `src/recommend.py` | Runs retrieve → rerank → threshold → generate; can exclude books already shown | Built |
+| `src/recommend.py` | Runs retrieve → rerank → threshold (0.45) → generate, then orders cards by match score; can exclude books already shown | Built |
 | `src/retrieve.py` | Embeds the query; Qdrant top 30 books by best chunk, max 2 per author | Built |
 | `src/embed.py` | `embed_texts()`, used here to embed the query | Built |
 | `src/rerank.py` | Cohere rerank to a 0 to 1 match score; falls back to similarity order on failure | Built |

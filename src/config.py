@@ -36,7 +36,9 @@ RETRIEVE_LIMIT = 30  # books pulled from Qdrant (one best chunk each) before rer
 RERANK_MODEL = "rerank-v4.0-fast"  # Cohere's low-latency rerank model
 RERANK_TOP_N = 10  # books kept after reranking, before the threshold
 RERANK_SUMMARY_CHARS = 2000  # summary trimmed to this before being sent to the reranker
-MATCH_THRESHOLD = 0.3  # minimum rerank score to show a book — NOT YET TUNED
+# minimum rerank score to show a book. Set 2026-09-29 from 5 spot-check queries: poor-match
+# queries topped out at 0.394, good ones had their top 5 at 0.533+. A spot check, not an eval.
+MATCH_THRESHOLD = 0.45
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
 # chat

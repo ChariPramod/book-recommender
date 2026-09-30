@@ -59,6 +59,10 @@ def recommend(
 
     by_id = {c["book_id"]: c for c in reranked}
     generated = generate(openai_client, query, reranked)
+    if ok:
+        # the LLM picks which books to show; the reranker's score decides the order,
+        # so a card ranked #2 never shows a higher match score than #1
+        generated.sort(key=lambda g: by_id[g["book_id"]]["match_score"], reverse=True)
 
     return [
         {

@@ -33,9 +33,10 @@ content of the books wanted, so it works without the history. For refine, merge 
 previous request with the new constraint. Keep the user's meaning; don't add preferences they
 didn't express. For every other intent, use an empty string.
 
-book_ref: for about_shown_book only, the book_id (in square brackets in the history) of the book
-the user means. Resolve positions like "the second one" using the numbered list of the most
-recent books shown. For every other intent, or if you can't tell which book, use null.
+book_ref: for about_shown_book only, the book_id of the book the user means, copied WITHOUT the
+square brackets it has in the history (for "[b01975]" return "b01975"). Resolve positions like
+"the second one" using the numbered list of the most recent books shown. For every other intent,
+or if you can't tell which book, use null.
 """
 
 RESPONSE_FORMAT = {

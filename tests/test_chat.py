@@ -90,6 +90,17 @@ def test_refine_without_shown_books_becomes_recommend(monkeypatch):
     assert reply["intent"] == "recommend"
 
 
+def test_bracketed_book_ref_still_resolves(monkeypatch):
+    # the router copied "[b1]" from the history in a real smoke-test run
+    session = chat.new_session()
+    session["shown_book_ids"] = ["b1"]
+    monkeypatch.setattr(chat, "route", lambda *a: {"intent": "about_shown_book", "search_query": "", "book_ref": "[b1]"})
+    monkeypatch.setattr(chat, "answer_about_book", lambda client, book, text: f"About {book['title']}")
+    reply = chat.handle_message(session, "tell me more about the first one", resources=fake_resources())
+    assert reply["intent"] == "about_shown_book"
+    assert reply["text"] == "About One"
+
+
 def test_about_unknown_book_asks_instead_of_guessing(monkeypatch):
     monkeypatch.setattr(chat, "route", lambda *a: {"intent": "about_shown_book", "search_query": "", "book_ref": "b999"})
     monkeypatch.setattr(chat, "llm_reply", lambda *a: "Which book do you mean?")

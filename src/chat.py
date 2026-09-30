@@ -147,7 +147,11 @@ def handle_message(session: dict, text: str, resources: dict | None = None) -> d
     history_text = format_history(session["turns"])
 
     routed = route(res["openai"], text, history_text)
-    intent, search_query, book_ref = routed["intent"], routed["search_query"].strip(), routed["book_ref"]
+    logger.info(f"router raw: {routed}")  # before our corrections, so a downgrade is traceable
+    intent, search_query = routed["intent"], routed["search_query"].strip()
+    # the history shows ids as "[b01975]" and the router has copied the brackets
+    # before (smoke test, 2026-09-29), which made every follow-up look unresolvable
+    book_ref = (routed["book_ref"] or "").strip().strip("[]").strip() or None
 
     shown_ids = set(session["shown_book_ids"])
     if intent == "refine" and not shown_ids:
